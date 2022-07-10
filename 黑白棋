@@ -1,0 +1,297 @@
+#include<iostream>
+#include<time.h>
+#include<fstream>
+#include<string>
+using namespace std;
+int n;//棋盘规模大小
+int sum = 0, x = 0, cnt = 0;//计数
+char chess[11][11];//初始化棋盘数组 
+class game
+{
+public:
+	void create()//创建棋盘
+	{
+		ifstream fin("1.in.txt");
+		if (!fin)
+		{
+			cout << "输入文件打不开";
+			exit(1);
+		}
+		fin >> n;
+		for (int i = 1; i <= n; i++)
+		{
+			for (int j = 1; j <= n; j++)
+			{
+				chess[i][j] = '0';
+			}
+		}
+		x = fin.tellg();
+		fin.close();
+	}
+
+
+	void print()//打印棋盘
+	{
+		ofstream fout("1.out.txt", ios::app);
+		if (!fout)
+		{
+			fout << "输入文件打不开";
+			exit(1);
+		}
+		fout << "Step " << cnt << endl;
+		for (int i = 1; i <= n; i++)
+		{
+			for (int j = 1; j <= n; j++)
+			{
+				fout << chess[i][j];
+			}
+			fout << endl;
+		}
+		fout << "White:" << sum_write() << " " << "Black:" << sum_black() << endl;
+		fout << endl;
+	}
+
+	int sum_write()
+	{
+		int sum = 0;
+		for (int i = 1; i <= n; i++)
+		{
+			for (int j = 1; j <= n; j++)
+			{
+				if (chess[i][j] == '1')
+				{
+					sum++;
+				}
+			}
+		}
+		return sum;
+	}
+	int sum_black()
+	{
+		int sum = 0;
+		for (int i = 1; i <= n; i++)
+		{
+			for (int j = 1; j <= n; j++)
+			{
+				if (chess[i][j] == '2')
+				{
+					sum++;
+				}
+			}
+		}
+		return sum;
+	}
+
+	void write()//白子先下
+	{
+		cnt++;
+		int a, b;
+		ifstream fin("1.in.txt");
+		if (!fin)
+		{
+			cout << "输入文件打不开";
+			exit(1);
+		}
+		fin.seekg(x, ios::beg);
+		fin >> a >> b;
+		chess[a][b] = '1';
+		change(a, b);
+		x = fin.tellg();
+	}
+
+
+	void black()//黑子后下
+	{
+		cnt++;
+		int c, d;
+		ifstream fin("1.in.txt");
+		if (!fin)
+		{
+			cout << "输入文件打不开";
+			exit(1);
+		}
+		fin.seekg(x, ios::beg);
+		fin >> c >> d;
+		chess[c][d] = '2';
+		change(c, d);
+		x = fin.tellg();
+	}
+
+	void winner()
+	{
+		ofstream fout("1.out.txt", ios::app);
+		if (!fout)
+		{
+			fout << "输入文件打不开";
+			exit(1);
+		}
+		if (sum_write() > sum_black())
+		{
+			fout << "White Wins" << endl;
+		}
+		else if (sum_write() < sum_black())
+		{
+			fout << "Black Wins" << endl;
+		}
+		else
+		{
+			fout << "平局" << endl;
+		}
+	}
+
+
+	void change(int a, int b)//将对称的棋子进行翻转
+	{
+
+		bool p = 0;
+		int x[10], y[10], c[10];
+		int cnt = 0;
+		for (int k = 2; k <= n; k++)
+		{
+			for (int i = k - 1; i >= 0; i--)
+			{
+				for (int j = k - 1; j >= 0; j--)
+				{
+					if (rectangular(a - i, b - j, k) && situations(a - i, b - j, k, a, b) && verdict(a - i, b - j, k))
+					{
+						x[cnt] = a - i; y[cnt] = b - j; c[cnt] = k;
+						cnt++;
+					}
+				}
+			}
+		}
+		for (int i = 0; i < cnt; i++)
+		{
+			turn(x[i], y[i], c[i], a, b);//翻转 
+		}
+		print();
+	}
+
+
+	void turn(int a, int b, int el, int x, int y)//实现数组的翻转 
+	{
+		for (int i = a; i < a + el; i++)
+		{
+			for (int j = b; j < b + el; j++)
+			{
+				chess[i][j] = chess[x][y];
+			}
+		}
+	}
+
+
+	bool rectangular(int a, int b, int el)//判断落子后是否围成一个矩形 
+	{
+		bool p = 0;
+		for (int i = a; i < a + el && a + el <= n + 1; i++)
+		{
+			for (int j = b; j < b + el && b + el <= n + 1; j++)
+			{
+				if (chess[i][j] != '0')
+				{
+					p = 1;
+				}
+				else
+				{
+					p = 0;
+					break;
+				}
+			}
+			if (p == 0)
+			{
+				break;
+			}
+		}
+		return p;
+	}
+
+
+
+	bool situations(int x, int y, int k, int a, int b)// 考虑特殊情况，确保落子位置处于棋盘内
+	{
+		bool p = a <= x + k - 1 && a >= x && b <= y + k - 1 && b >= y;
+		bool q = x * y <= a * b && x * y >= 1;
+		return p && q;
+	}
+
+
+	bool verdict(int x, int y, int el)//判断是否对称  
+	{
+		bool x_axis = 0, y_axis = 0;
+		for (int i = 0; i < el / 2; i++)
+		{
+			for (int j = 0; j < el; j++)
+			{
+				if (chess[x + i][y + j] != '0' && chess[x + i][y + j] == chess[x + el - i - 1][y + j])
+				{
+					x_axis = 1;
+				}
+				else
+				{
+					x_axis = 0;
+					break;
+				}
+			}
+			if (x_axis == 0)
+			{
+				break;
+			}
+		}
+		for (int i = 0; i < el; i++)
+		{
+			for (int j = 0; j < el / 2; j++)
+			{
+				if (chess[x + i][y + j] != '0' && chess[x + i][y + j] == chess[x + i][y + el - j - 1])
+				{
+					y_axis = 1;
+				}
+				else
+				{
+					y_axis = 0;
+					break;
+				}
+			}
+			if (y_axis == 0)
+			{
+				break;
+			}
+		}
+		return x_axis | y_axis;
+	}
+};
+int main()
+{
+	ifstream fin("1.out.txt");
+	ofstream fout("1.out.txt");
+	if (!fout)
+	{
+		fout << "输入文件打不开";
+		exit(1);
+	}
+	game g;
+	g.create();
+	int m = 0;
+	bool p = 1;
+	while (m < n * n)
+	{
+		if (p == 1)
+		{
+			g.write();
+			p = 0;
+			m++;
+		}
+		else
+		{
+			g.black();
+			p = 1;
+			m++;
+		}
+	}
+	g.winner();
+	string line;
+	while (getline(fin, line))
+	{
+		cout << line << endl;
+	}
+	fout.close();
+}
